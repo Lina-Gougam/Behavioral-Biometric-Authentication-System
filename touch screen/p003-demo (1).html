@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P003 — Behavioral Biometric Authentication</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080b14;--surface:#0f1225;--card:#141830;--accent:#4f8ef7;--accent2:#7c5cfc;--green:#2ecc71;--red:#e74c3c;--yellow:#f39c12;--text:#e0e4f8;--muted:#5a6382;--border:#1e2447;--radius:14px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.5;background-image:radial-gradient(circle,#1e2447 1px,transparent 1px);background-size:28px 28px}
+#root{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(8,11,20,.95) 0%,rgba(8,11,20,1) 100%)}
+header{background:linear-gradient(135deg,rgba(20,24,48,.98),rgba(12,14,30,.98));border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
+.logo{width:42px;height:42px;flex-shrink:0;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(79,142,247,.5),0 4px 12px rgba(0,0,0,.4)}
+.header-text{flex:1}
+header h1{font-size:1.1rem;font-weight:700;letter-spacing:-.02em;background:linear-gradient(135deg,#fff,#a0b4f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+header p{font-size:.75rem;color:var(--muted);margin-top:2px}
+.header-badge{font-size:.72rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;background:rgba(79,142,247,.12);color:var(--accent);border:1px solid rgba(79,142,247,.25);border-radius:20px;padding:4px 12px;white-space:nowrap}
+.tabs{display:flex;gap:4px;padding:12px 28px 0;border-bottom:1px solid var(--border);background:rgba(8,11,20,.9);backdrop-filter:blur(8px)}
+.tab{display:flex;align-items:center;gap:7px;padding:9px 16px;cursor:pointer;border-radius:9px 9px 0 0;font-size:.85rem;font-weight:500;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;transition:color .15s,background .15s;font-family:inherit}
+.tab.active{color:var(--accent);border-color:var(--border);background:var(--card);font-weight:600}
+.tab:hover:not(.active){color:var(--text)}
+.tab-num{width:18px;height:18px;border-radius:50%;font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.07);color:var(--muted)}
+.tab.active .tab-num{background:rgba(79,142,247,.2);color:var(--accent)}
+.page{padding:22px 28px;flex:1;display:none}
+.page.active{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;transition:border-color .2s,box-shadow .2s}
+.mt{margin-top:16px}
+.card:hover{border-color:#262d52;box-shadow:0 4px 32px rgba(0,0,0,.3)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.card h3{font-size:.9rem;font-weight:600;color:var(--text);margin-bottom:10px;letter-spacing:-.01em}
+.card-sub{font-size:.79rem;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.rec-badge{display:flex;align-items:center;gap:6px;background:rgba(231,76,60,.12);color:var(--red);border:1px solid rgba(231,76,60,.25);border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:700;letter-spacing:.06em;flex-shrink:0}
+.rec-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:recpulse 1s ease-in-out infinite}
+@keyframes recpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.canvas-wrap{position:relative;border-radius:10px;overflow:hidden;transition:box-shadow .25s}
+.canvas-wrap.canvas-active{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(79,142,247,.25)}
+canvas{width:100%;height:220px;display:block;background:linear-gradient(135deg,var(--surface),#0c1020);border-radius:10px;border:1.5px solid var(--border);cursor:crosshair;touch-action:none}
+.canvas-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none;color:var(--muted);font-size:.8rem;user-select:none}
+.canvas-hint svg{opacity:.5}
+.canvas-rec-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);color:var(--accent);font-size:.75rem;font-weight:500;border-radius:20px;padding:4px 14px;pointer-events:none;animation:fadein .3s ease}
+@keyframes fadein{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.btn{padding:9px 18px;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;transition:opacity .15s,transform .12s,box-shadow .15s;font-family:inherit;white-space:nowrap}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+.btn-record{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 2px 16px rgba(79,142,247,.35)}
+.btn-record:hover:not(:disabled){opacity:.88;transform:translateY(-1px)}
+.btn-stop{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;animation:stopglow 1.5s ease-in-out infinite}
+@keyframes stopglow{0%,100%{box-shadow:0 2px 16px rgba(231,76,60,.35)}50%{box-shadow:0 2px 24px rgba(231,76,60,.6)}}
+.btn-stop:hover{opacity:.88;transform:translateY(-1px)}
+.btn-save{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;box-shadow:0 2px 16px rgba(46,204,113,.3)}
+.btn-save:hover:not(:disabled){opacity:.88;transform:translateY(-1px)}
+.btn-auth{background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;box-shadow:0 2px 16px rgba(79,142,247,.3)}
+.btn-auth:hover:not(:disabled){opacity:.88;transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-outline:hover{color:var(--text);border-color:#2e3660}
+.btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}
+.user-select-row{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:.82rem;color:var(--muted)}
+select{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.85rem;font-family:inherit;cursor:pointer;outline:none;transition:border-color .15s}
+select:focus{border-color:var(--accent)}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.stat{background:var(--surface);border-radius:9px;padding:11px 8px;text-align:center;border:1px solid var(--border)}
+.stat .val{font-size:1.1rem;font-weight:700;color:var(--accent);line-height:1.2;font-variant-numeric:tabular-nums}
+.stat .lbl{font-size:.65rem;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:.8rem;font-weight:600}
+.badge-green{background:rgba(46,204,113,.1);color:var(--green);border:1px solid rgba(46,204,113,.22)}
+.badge-red{background:rgba(231,76,60,.1);color:var(--red);border:1px solid rgba(231,76,60,.22)}
+.badge-yellow{background:rgba(243,156,18,.1);color:var(--yellow);border:1px solid rgba(243,156,18,.22)}
+.log{background:var(--surface);border-radius:9px;padding:11px;max-height:150px;overflow-y:auto;font-size:.75rem;font-family:'Menlo','Monaco','Consolas',monospace;border:1px solid var(--border)}
+.log-entry{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);color:var(--muted)}
+.log-entry.ok{color:var(--green)}.log-entry.fail{color:var(--red)}.log-entry.info{color:var(--accent)}
+.user-list{display:flex;flex-direction:column;gap:8px}
+.user-item{background:var(--surface);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border)}
+.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0}
+.user-info h4{font-size:.875rem;font-weight:600}.user-info p{font-size:.74rem;color:var(--muted)}
+.progress-bar{background:var(--border);border-radius:4px;height:4px;overflow:hidden;margin-top:5px}
+.progress-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.empty-msg{color:var(--muted);font-size:.82rem;text-align:center;padding:20px 0}
+.warn-msg{font-size:.76rem;color:var(--yellow);margin-top:8px}
+.score-gauge{position:relative;width:100px;height:100px;flex-shrink:0}
+.score-gauge svg{width:100%;height:100%}
+.score-gauge-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700}
+.result-row{display:flex;align-items:center;gap:20px}
+.result-verdict{font-size:1.15rem;font-weight:700;letter-spacing:.03em;margin-bottom:6px}
+.result-reason{font-size:.8rem;color:var(--muted);line-height:1.5}
+.result-demo{font-size:.75rem;color:var(--yellow);margin-top:4px}
+.result-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 16px;text-align:center;color:var(--muted);gap:10px}
+.result-idle-icon{width:56px;height:56px;border-radius:50%;background:rgba(79,142,247,.07);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.chart-bar{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:.8rem}
+.chart-bar .name{width:80px;color:var(--muted);flex-shrink:0}
+.chart-bar .bar{flex:1;height:13px;border-radius:4px;background:var(--surface);overflow:hidden;border:1px solid var(--border)}
+.chart-bar .fill{height:100%;border-radius:4px;transition:width .5s ease}
+.chart-bar .pct{width:42px;text-align:right;font-weight:600;flex-shrink:0;font-size:.78rem}
+.metric-row{display:flex;gap:8px;margin-top:10px}
+.metric{flex:1;background:var(--surface);border-radius:9px;padding:12px 8px;text-align:center;border:1px solid var(--border)}
+.metric .mv{font-size:.95rem;font-weight:700}.metric .ml{font-size:.67rem;color:var(--muted);margin-top:3px;line-height:1.4}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+th{text-align:left;padding:7px 10px;color:var(--muted);border-bottom:1px solid var(--border);font-weight:500;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em}
+td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.03)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.info-box{background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.16);border-radius:10px;padding:13px;font-size:.81rem;line-height:1.65}
+.info-box strong{color:var(--accent)}
+.pipeline-step{background:var(--surface);border-radius:8px;padding:10px 12px;font-size:.85rem;margin-bottom:8px}
+.security-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border-radius:8px;font-size:.85rem;margin-bottom:8px}
+.sec-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:.85rem}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}header{padding:12px 16px}.tabs{padding:10px 16px 0}.tab{padding:8px 12px;font-size:.8rem}.page{padding:14px 16px}.card{padding:16px}.result-row{flex-direction:column;text-align:center}.header-badge{display:none}}
+</style>
+</head>
+<body>
+<div id="root">
+<header>
+  <div class="logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+  </div>
+  <div class="header-text">
+    <h1>P003 — Behavioral Biometric Authentication</h1>
+    <p>Touchscreen Gesture Analysis · Computer &amp; Network Security</p>
+  </div>
+  <div class="header-badge">Gesture Auth Demo</div>
+</header>
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('enroll',this)"><span class="tab-num">1</span>Enroll</button>
+  <button class="tab" onclick="switchTab('auth',this)"><span class="tab-num">2</span>Authenticate</button>
+  <button class="tab" onclick="switchTab('results',this)"><span class="tab-num">3</span>Results</button>
+  <button class="tab" onclick="switchTab('about',this)"><span class="tab-num">4</span>About</button>
+</div>
+
+<!-- ══ ENROLL ══ -->
+<div id="tab-enroll" class="page active">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Draw Your Gesture Profile</h3>
+          <span id="e-rec-badge" class="rec-badge" style="display:none"><span class="rec-dot"></span>REC</span>
+        </div>
+        <p class="card-sub">Click <strong>Record Gesture</strong>, draw on the canvas, then save. Collect <strong>5 samples</strong> per user to build a full profile.</p>
+        <div class="canvas-wrap" id="e-wrap">
+          <canvas id="e-canvas"></canvas>
+          <div class="canvas-hint" id="e-hint">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span>Click "Record Gesture" to begin</span>
+          </div>
+          <div class="canvas-rec-hint" id="e-rechint" style="display:none">Draw your gesture now...</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-record" id="e-rec-btn" onclick="eRecord()">Record Gesture</button>
+          <button class="btn btn-stop" id="e-stop-btn" onclick="eStop()" style="display:none">Stop Recording</button>
+          <button class="btn btn-outline" onclick="eClear()">Clear</button>
+          <button class="btn btn-save" id="e-save-btn" onclick="eSave()" disabled>Save Sample</button>
+        </div>
+        <div class="user-select-row">
+          <label>Enrolling as</label>
+          <select id="e-user"><option value="0">User 0</option><option value="1">User 1</option><option value="2">User 2</option></select>
+        </div>
+      </div>
+      <div class="card mt">
+        <h3>Live Gesture Stats</h3>
+        <div class="stat-grid">
+          <div class="stat"><div class="val" id="e-pts">0</div><div class="lbl">Points</div></div>
+          <div class="stat"><div class="val" id="e-dur">—</div><div class="lbl">Duration</div></div>
+          <div class="stat"><div class="val" id="e-spd">—</div><div class="lbl">Avg Speed</div></div>
+          <div class="stat"><div class="val" id="e-prs">—</div><div class="lbl">Pressure</div></div>
+          <div class="stat"><div class="val" id="e-len">—</div><div class="lbl">Path Length</div></div>
+          <div class="stat"><div class="val" id="e-str">—</div><div class="lbl">Straightness</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Enrolled Users</h3>
+        <div class="user-list" id="e-user-list"><p class="empty-msg">No users enrolled yet.</p></div>
+      </div>
+      <div class="card mt">
+        <h3>Enrollment Log</h3>
+        <div class="log" id="e-log"><div class="log-entry info" id="e-log-init"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH ══ -->
+<div id="tab-auth" class="page">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Authentication Challenge</h3>
+          <span id="a-rec-badge" class="rec-badge" style="display:none"><span class="rec-dot"></span>REC</span>
+        </div>
+        <p class="card-sub">Select your claimed identity, record your gesture, then verify. The system checks your behavioral pattern against the enrolled profile.</p>
+        <div class="user-select-row" style="margin-bottom:14px">
+          <label>Claiming identity as</label>
+          <select id="a-user"><option value="">— Select User —</option><option value="0">User 0</option><option value="1">User 1</option><option value="2">User 2</option></select>
+        </div>
+        <div class="canvas-wrap" id="a-wrap">
+          <canvas id="a-canvas"></canvas>
+          <div class="canvas-hint" id="a-hint">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span>Click "Record Gesture" to begin</span>
+          </div>
+          <div class="canvas-rec-hint" id="a-rechint" style="display:none">Draw your gesture now...</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-record" id="a-rec-btn" onclick="aRecord()">Record Gesture</button>
+          <button class="btn btn-stop" id="a-stop-btn" onclick="aStop()" style="display:none">Stop Recording</button>
+          <button class="btn btn-outline" onclick="aClear()">Clear</button>
+          <button class="btn btn-auth" id="a-auth-btn" onclick="aVerify()" disabled>Verify Identity</button>
+        </div>
+        <p class="warn-msg" id="a-warn" style="display:none">Select a user identity above before verifying</p>
+      </div>
+      <div class="card mt">
+        <h3>Live Gesture Stats</h3>
+        <div class="stat-grid">
+          <div class="stat"><div class="val" id="a-pts">0</div><div class="lbl">Points</div></div>
+          <div class="stat"><div class="val" id="a-dur">—</div><div class="lbl">Duration</div></div>
+          <div class="stat"><div class="val" id="a-spd">—</div><div class="lbl">Avg Speed</div></div>
+          <div class="stat"><div class="val" id="a-prs">—</div><div class="lbl">Pressure</div></div>
+          <div class="stat"><div class="val" id="a-len">—</div><div class="lbl">Path Length</div></div>
+          <div class="stat"><div class="val" id="a-str">—</div><div class="lbl">Straightness</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" id="a-result-card">
+        <div class="result-idle">
+          <div class="result-idle-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+          <p>Awaiting verification</p>
+          <p style="font-size:.77rem;color:var(--muted);margin-top:4px">Record a gesture and press Verify Identity</p>
+        </div>
+      </div>
+      <div class="card mt">
+        <h3>Authentication Log</h3>
+        <div class="log" id="a-log"><div class="log-entry info" id="a-log-init"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESULTS ══ -->
+<div id="tab-results" class="page">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h3>EER Results — Real Dataset</h3>
+        <p class="card-sub">912,133 touch events · 5 users · Isolation Forest vs One-Class SVM</p>
+        <div id="eer-bars"></div>
+      </div>
+      <div class="card mt">
+        <h3>Model Comparison</h3>
+        <table>
+          <thead><tr><th>Model</th><th>Mean EER</th><th>Mean AUC</th><th>Best User</th></tr></thead>
+          <tbody>
+            <tr><td>Isolation Forest</td><td style="color:var(--green)">28.70%</td><td>0.748</td><td>User 4 (16.7%)</td></tr>
+            <tr><td>One-Class SVM</td><td style="color:var(--yellow)">28.60%</td><td>0.771</td><td>User 4 (0.0%)</td></tr>
+          </tbody>
+        </table>
+        <div class="info-box" style="margin-top:14px"><strong>Note:</strong> Lower EER = better. EER is where FAR = FRR. User 4 achieved perfect auth with SVM (EER=0%, AUC=1.0).</div>
+      </div>
+    </div>
+    <div>
+      <div class="card"><h3>Per-User Detailed Results</h3><table><thead><tr><th>User</th><th>IF EER</th><th>IF AUC</th><th>SVM EER</th><th>SVM AUC</th></tr></thead><tbody id="results-tbl"></tbody></table></div>
+      <div class="card mt">
+        <h3>Key Metrics</h3>
+        <div class="metric-row">
+          <div class="metric"><div class="mv" style="color:var(--red)">FAR</div><div class="ml">False Acceptance Rate — impostors let in</div></div>
+          <div class="metric"><div class="mv" style="color:var(--yellow)">FRR</div><div class="ml">False Rejection Rate — genuine users blocked</div></div>
+          <div class="metric"><div class="mv" style="color:var(--green)">EER</div><div class="ml">Equal Error Rate — FAR = FRR point</div></div>
+        </div>
+      </div>
+      <div class="card mt"><h3>Feature Importance</h3><div id="feat-bars"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ABOUT ══ -->
+<div id="tab-about" class="page">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h3>Project Overview</h3>
+        <div class="info-box" style="line-height:1.8">
+          <strong>Project:</strong> P003 — Behavioral Biometric Authentication System<br>
+          <strong>Component:</strong> Touchscreen Gesture Authentication<br>
+          <strong>Course:</strong> Computer &amp; Network Security<br><br>
+          This system authenticates users by analysing <strong>how</strong> they interact with a touchscreen — not what they know or have. Even if credentials are stolen, an attacker cannot replicate the unique behavioral signature of the genuine user.
+        </div>
+      </div>
+      <div class="card mt">
+        <h3>System Pipeline</h3>
+        <div class="pipeline-step" style="border-left:3px solid var(--accent)"><strong>1. Raw Touch Events</strong><br><span style="color:var(--muted)">x, y, pressure, size, timestamp collected at ~100 Hz</span></div>
+        <div class="pipeline-step" style="border-left:3px solid var(--accent2)"><strong>2. Feature Extraction</strong><br><span style="color:var(--muted)">19 features per stroke: spatial, temporal, kinematic, pressure, size</span></div>
+        <div class="pipeline-step" style="border-left:3px solid var(--yellow)"><strong>3. User Profiling</strong><br><span style="color:var(--muted)">One-class model trained on genuine user data (70/30 split)</span></div>
+        <div class="pipeline-step" style="border-left:3px solid var(--green)"><strong>4. Authentication Decision</strong><br><span style="color:var(--muted)">Anomaly score vs EER threshold → Accept or Reject</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>The 19 Extracted Features</h3>
+        <table>
+          <thead><tr><th>Category</th><th>Features</th></tr></thead>
+          <tbody>
+            <tr><td>Temporal</td><td>duration, num_events, event_rate</td></tr>
+            <tr><td>Spatial</td><td>displacement, direction_deg, path_length, straightness, bbox_w, bbox_h</td></tr>
+            <tr><td>Kinematic</td><td>mean_speed, max_speed, mean_accel</td></tr>
+            <tr><td>Pressure</td><td>pres_mean, pres_std, pres_min, pres_max</td></tr>
+            <tr><td>Size</td><td>size_mean, size_std, size_max</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card mt">
+        <h3>Security Properties</h3>
+        <div class="security-item"><div class="sec-icon" style="background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3)">✓</div><div><strong>Liveness Detection</strong> — real gestures only; photos don't work</div></div>
+        <div class="security-item"><div class="sec-icon" style="background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3)">✓</div><div><strong>Continuous Auth</strong> — verify identity throughout a session</div></div>
+        <div class="security-item"><div class="sec-icon" style="background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3)">✓</div><div><strong>Password-free</strong> — nothing to steal, forget, or phish</div></div>
+        <div class="security-item"><div class="sec-icon" style="background:rgba(243,156,18,.15);color:var(--yellow);border:1px solid rgba(243,156,18,.3)">!</div><div><strong>Limitation</strong> — EER ~28% — room for improvement with more data</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- #root -->
+
+<script>
+// ─── Data ─────────────────────────────────────────────────────────────────────
+const profiles={};
+const COLORS=["#4f8ef7","#7c5cfc","#2ecc71","#e74c3c","#f39c12"];
+const REAL=[
+  {u:0,ifE:25.00,ifA:.700,svE:60.00,svA:.560},
+  {u:1,ifE:33.33,ifA:.757,svE:27.08,svA:.830},
+  {u:2,ifE:18.52,ifA:.883,svE:25.93,svA:.827},
+  {u:3,ifE:50.00,ifA:.680,svE:30.00,svA:.640},
+  {u:4,ifE:16.67,ifA:.806,svE: 0.00,svA:1.00},
+];
+
+// ─── Math ─────────────────────────────────────────────────────────────────────
+const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const sd=a=>{const m=avg(a);return Math.sqrt(avg(a.map(x=>(x-m)**2)));};
+
+function extract(pts){
+  if(pts.length<2) return null;
+  const ts=pts.map(p=>p.t),xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),pr=pts.map(p=>p.p);
+  const dur=(ts[ts.length-1]-ts[0])/1000;
+  const dx=xs[xs.length-1]-xs[0],dy=ys[ys.length-1]-ys[0];
+  const disp=Math.hypot(dx,dy),dir=Math.atan2(dy,dx+1e-9)*180/Math.PI;
+  let pathLen=0;const steps=[];
+  for(let i=1;i<pts.length;i++){const d=Math.hypot(xs[i]-xs[i-1],ys[i]-ys[i-1]);steps.push(d);pathLen+=d;}
+  const str=disp/(pathLen+1e-9),mspd=pathLen/(dur+1e-9);
+  let maxSpd=0;
+  if(steps.length>1){
+    const dt=[];for(let i=1;i<ts.length;i++) dt.push((ts[i]-ts[i-1])/1000+1e-9);
+    const sp=steps.map((s,i)=>s/(dt[i]||1e-9));maxSpd=Math.max(...sp);
+  }
+  return {dur,numPts:pts.length,disp,dir,pathLen,str,
+    bboxW:Math.max(...xs)-Math.min(...xs),bboxH:Math.max(...ys)-Math.min(...ys),
+    mspd,maxSpd,presMean:avg(pr),presStd:sd(pr),presMin:Math.min(...pr),presMax:Math.max(...pr)};
+}
+
+const fsim=(a,b)=>{const m=Math.max(Math.abs(a),Math.abs(b),1);return 1-Math.min(Math.abs(a-b)/m,1);};
+const scoreAll=(t,arr)=>avg(arr.map(pf=>avg(["dur","str","mspd","dir","disp"].map(k=>fsim(t[k],pf[k])))));
+const scoreKey=(t,arr,k)=>avg(arr.map(pf=>fsim(t[k],pf[k])));
+
+function liveStats(pts){
+  if(pts.length<2) return{pts:pts.length,dur:"—",spd:"—",prs:"—",len:"—",str:"—"};
+  let pathLen=0;
+  for(let i=1;i<pts.length;i++) pathLen+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);
+  const dur=pts[pts.length-1].t-pts[0].t;
+  const dx=pts[pts.length-1].x-pts[0].x,dy=pts[pts.length-1].y-pts[0].y;
+  const disp=Math.hypot(dx,dy);
+  const avgP=pts.reduce((s,p)=>s+p.p,0)/pts.length;
+  return{pts:pts.length,dur:dur+"ms",spd:Math.round(pathLen/(dur/1000+1e-9)),
+    prs:avgP.toFixed(2),len:Math.round(pathLen)+"px",str:(disp/(pathLen+1e-9)).toFixed(2)};
+}
+
+// ─── Canvas factory ────────────────────────────────────────────────────────────
+function makeCanvas(cid,wid,hid,rhid,bid,sids,onEnd){
+  const c=document.getElementById(cid),wrap=document.getElementById(wid);
+  const hint=document.getElementById(hid),rh=document.getElementById(rhid),badge=document.getElementById(bid);
+  const ctx=c.getContext("2d");
+  let state="idle",drawing=false,pts=[];
+
+  function resize(){const r=c.getBoundingClientRect();if(r.width>0){c.width=r.width;c.height=220;}}
+  resize();window.addEventListener("resize",resize);
+
+  function upStats(){
+    const s=liveStats(pts);
+    document.getElementById(sids[0]).textContent=s.pts;
+    document.getElementById(sids[1]).textContent=s.dur;
+    document.getElementById(sids[2]).textContent=s.spd;
+    document.getElementById(sids[3]).textContent=s.prs;
+    document.getElementById(sids[4]).textContent=s.len;
+    document.getElementById(sids[5]).textContent=s.str;
+  }
+
+  function getPos(e){
+    const r=c.getBoundingClientRect(),s=e.touches?e.touches[0]:e;
+    return{x:s.clientX-r.left,y:s.clientY-r.top,p:e.touches?(e.touches[0].force||0.5):0.5,t:Date.now()};
+  }
+
+  c.addEventListener("mousedown",e=>{if(state!=="recording")return;drawing=true;const p=getPos(e);pts=[p];ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.strokeStyle="#4f8ef7";ctx.lineWidth=2.5;ctx.lineCap="round";ctx.lineJoin="round";});
+  c.addEventListener("mousemove",e=>{if(!drawing||state!=="recording")return;const p=getPos(e);pts.push(p);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);upStats();});
+  c.addEventListener("mouseup",()=>{if(!drawing)return;drawing=false;if(state==="recording"&&pts.length>2){state="done";wrap.classList.remove("canvas-active");badge.style.display="none";rh.style.display="none";onEnd(pts);}});
+  c.addEventListener("touchstart",e=>{e.preventDefault();if(state!=="recording")return;drawing=true;const p=getPos(e);pts=[p];ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.strokeStyle="#4f8ef7";ctx.lineWidth=2.5;ctx.lineCap="round";ctx.lineJoin="round";},{passive:false});
+  c.addEventListener("touchmove",e=>{e.preventDefault();if(!drawing||state!=="recording")return;const p=getPos(e);pts.push(p);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);upStats();},{passive:false});
+  c.addEventListener("touchend",()=>{if(!drawing)return;drawing=false;if(state==="recording"&&pts.length>2){state="done";wrap.classList.remove("canvas-active");badge.style.display="none";rh.style.display="none";onEnd(pts);}});
+
+  return{
+    start(){ctx.clearRect(0,0,c.width,c.height);pts=[];drawing=false;state="recording";wrap.classList.add("canvas-active");hint.style.display="none";badge.style.display="flex";rh.style.display="block";upStats();},
+    stop(){drawing=false;state="done";wrap.classList.remove("canvas-active");badge.style.display="none";rh.style.display="none";if(pts.length>2) onEnd(pts);},
+    clear(){ctx.clearRect(0,0,c.width,c.height);pts=[];drawing=false;state="idle";wrap.classList.remove("canvas-active");hint.style.display="flex";badge.style.display="none";rh.style.display="none";upStats();},
+    getPoints(){return pts;},
+    resize,
+  };
+}
+
+// ─── Log helper ───────────────────────────────────────────────────────────────
+function addLog(id,type,msg){
+  const el=document.getElementById(id),div=document.createElement("div");
+  div.className="log-entry "+type;
+  div.textContent=new Date().toLocaleTimeString()+" "+msg;
+  el.insertBefore(div,el.firstChild);
+  while(el.children.length>20) el.removeChild(el.lastChild);
+}
+
+// ─── Enroll ───────────────────────────────────────────────────────────────────
+const EC=makeCanvas("e-canvas","e-wrap","e-hint","e-rechint","e-rec-badge",
+  ["e-pts","e-dur","e-spd","e-prs","e-len","e-str"],
+  ()=>{document.getElementById("e-save-btn").disabled=false;showRecBtn("e");}
+);
+function showRecBtn(pfx){document.getElementById(pfx+"-rec-btn").style.display="";document.getElementById(pfx+"-stop-btn").style.display="none";}
+
+function eRecord(){EC.start();document.getElementById("e-save-btn").disabled=true;document.getElementById("e-rec-btn").style.display="none";document.getElementById("e-stop-btn").style.display="";addLog("e-log","info","[ Recording ] Draw your gesture on the canvas now...");}
+function eStop(){EC.stop();showRecBtn("e");addLog("e-log","info","[ Stopped ] Gesture captured. Click Save Sample to enroll.");}
+function eClear(){EC.clear();document.getElementById("e-save-btn").disabled=true;showRecBtn("e");}
+function eSave(){
+  const pts=EC.getPoints();if(pts.length<3)return;
+  const feat=extract(pts);if(!feat)return;
+  const uid=document.getElementById("e-user").value;
+  if(!profiles[uid]) profiles[uid]={samples:[]};
+  profiles[uid].samples.push(feat);
+  const n=profiles[uid].samples.length;
+  addLog("e-log","ok","[ Saved ] User "+uid+" — sample "+n+"/5");
+  if(n>=5) addLog("e-log","ok","[ Complete ] User "+uid+" profile ready!");
+  eClear();renderUserList();
+}
+function renderUserList(){
+  const el=document.getElementById("e-user-list"),keys=Object.keys(profiles);
+  if(!keys.length){el.innerHTML='<p class="empty-msg">No users enrolled yet.</p>';return;}
+  el.innerHTML=keys.map(uid=>{
+    const n=profiles[uid].samples.length,pct=Math.min(n/5*100,100),col=COLORS[+uid%COLORS.length];
+    return`<div class="user-item"><div style="display:flex;align-items:center;gap:12px">
+      <div class="avatar" style="background:${col}22;color:${col}">U${uid}</div>
+      <div class="user-info"><h4>User ${uid}</h4><p>${n}/5 samples</p>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
+      </div></div>
+      <span class="badge ${n>=5?"badge-green":"badge-yellow"}">${n>=5?"Ready":"In progress"}</span>
+    </div>`;
+  }).join("");
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+const AC=makeCanvas("a-canvas","a-wrap","a-hint","a-rechint","a-rec-badge",
+  ["a-pts","a-dur","a-spd","a-prs","a-len","a-str"],
+  ()=>{const uid=document.getElementById("a-user").value;document.getElementById("a-auth-btn").disabled=!uid;showRecBtn("a");if(!uid) document.getElementById("a-warn").style.display="";}
+);
+function aRecord(){AC.start();document.getElementById("a-auth-btn").disabled=true;document.getElementById("a-warn").style.display="none";document.getElementById("a-rec-btn").style.display="none";document.getElementById("a-stop-btn").style.display="";addLog("a-log","info","[ Recording ] Draw your gesture now...");}
+function aStop(){AC.stop();showRecBtn("a");addLog("a-log","info","[ Stopped ] Gesture captured. Click Verify Identity.");}
+function aClear(){AC.clear();document.getElementById("a-auth-btn").disabled=true;document.getElementById("a-warn").style.display="none";showRecBtn("a");document.getElementById("a-result-card").innerHTML=`<div class="result-idle"><div class="result-idle-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><p>Awaiting verification</p><p style="font-size:.77rem;color:var(--muted);margin-top:4px">Record a gesture and press Verify Identity</p></div>`;}
+
+function aVerify(){
+  const uid=document.getElementById("a-user").value;
+  if(!uid){document.getElementById("a-warn").style.display="";return;}
+  const pts=AC.getPoints();if(pts.length<3){addLog("a-log","fail","[ Error ] Record a gesture first.");return;}
+  const feat=extract(pts);if(!feat)return;
+  const prof=profiles[uid];
+  let sc,accepted,reason,demo=false,bd;
+  if(prof&&prof.samples.length>=3){
+    sc=scoreAll(feat,prof.samples);accepted=sc>=.55;
+    reason=accepted?"Behavioral pattern matches enrolled profile":"Pattern does not match enrolled profile";
+    bd=[
+      {n:"Duration",v:Math.round(feat.dur*1000)+"ms",m:scoreKey(feat,prof.samples,"dur")},
+      {n:"Speed",v:Math.round(feat.mspd)+"px/s",m:scoreKey(feat,prof.samples,"mspd")},
+      {n:"Straight.",v:feat.str.toFixed(2),m:scoreKey(feat,prof.samples,"str")},
+      {n:"Pressure",v:feat.presMean.toFixed(2),m:scoreKey(feat,prof.samples,"presMean")},
+      {n:"Path Len",v:Math.round(feat.pathLen)+"px",m:scoreKey(feat,prof.samples,"pathLen")},
+    ];
+  } else {
+    sc=.4+Math.random()*.5;accepted=sc>.6;demo=true;
+    reason="Demo mode — enroll 3+ samples for real comparison";
+    bd=[
+      {n:"Duration",v:Math.round(feat.dur*1000)+"ms",m:Math.random()*.4+.5},
+      {n:"Speed",v:Math.round(feat.mspd)+"px/s",m:Math.random()*.4+.5},
+      {n:"Straight.",v:feat.str.toFixed(2),m:Math.random()*.4+.5},
+      {n:"Pressure",v:feat.presMean.toFixed(2),m:Math.random()*.4+.5},
+      {n:"Path Len",v:Math.round(feat.pathLen)+"px",m:sc},
+    ];
+  }
+  const pct=Math.round(sc*100);
+  const col=accepted?"var(--green)":pct>45?"var(--yellow)":"var(--red)";
+  const r=38,circ=2*Math.PI*r,offset=circ-(pct/100)*circ;
+  const barsH=bd.map(f=>{
+    const c2=f.m>.65?"var(--green)":f.m>.45?"var(--yellow)":"var(--red)";
+    return`<div class="chart-bar"><span class="name">${f.n}</span><div class="bar"><div class="fill" style="width:${f.m*100}%;background:${c2}"></div></div><span class="pct" style="color:${c2}">${Math.round(f.m*100)}%</span></div><div style="font-size:.73rem;color:var(--muted);margin:-3px 0 6px 90px">${f.v}</div>`;
+  }).join("");
+  document.getElementById("a-result-card").innerHTML=`
+    <div class="result-row">
+      <div class="score-gauge">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/>
+          <circle cx="50" cy="50" r="${r}" fill="none" stroke="${col}" stroke-width="7"
+            stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"
+            transform="rotate(-90 50 50)" style="transition:stroke-dashoffset .8s ease"/>
+        </svg>
+        <div class="score-gauge-val" style="color:${col}">${pct}%</div>
+      </div>
+      <div class="result-text">
+        <div class="result-verdict" style="color:${col}">${accepted?"ACCESS GRANTED":"ACCESS DENIED"}</div>
+        <div class="result-reason">${reason}</div>
+        ${demo?`<div class="result-demo">Demo — enroll User ${uid} with 3+ samples for real matching</div>`:""}
+        <span class="badge ${accepted?"badge-green":"badge-red"}" style="margin-top:10px;display:inline-flex">Similarity: ${pct}%</span>
+      </div>
+    </div>
+    <div style="margin-top:18px"><h3 style="margin-bottom:12px">Score Breakdown</h3>${barsH}</div>`;
+  addLog("a-log",accepted?"ok":"fail","[ "+(accepted?"GRANTED":"DENIED")+" ] User "+uid+" — "+pct+"% similarity");
+}
+
+// ─── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name,btn){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
+  btn.classList.add("active");
+  if(name==="auth") setTimeout(()=>AC.resize(),15);
+}
+
+// ─── Results render ────────────────────────────────────────────────────────────
+(function(){
+  document.getElementById("eer-bars").innerHTML=REAL.map(r=>{
+    const ci=r.ifE<25?"var(--green)":r.ifE<35?"var(--yellow)":"var(--red)";
+    return`<div style="margin-bottom:14px"><div style="font-size:.78rem;color:var(--muted);margin-bottom:3px">User ${r.u}</div>
+      <div class="chart-bar"><span class="name" style="width:50px">IF</span><div class="bar"><div class="fill" style="width:${r.ifE*2}%;background:${ci}"></div></div><span class="pct" style="color:${ci}">${r.ifE}%</span></div>
+      <div class="chart-bar"><span class="name" style="width:50px">SVM</span><div class="bar"><div class="fill" style="width:${r.svE*2}%;background:var(--accent2)"></div></div><span class="pct" style="color:var(--accent2)">${r.svE}%</span></div>
+    </div>`;
+  }).join("");
+  document.getElementById("results-tbl").innerHTML=REAL.map(r=>{
+    const ci=r.ifE<25?"var(--green)":r.ifE<35?"var(--yellow)":"var(--red)";
+    const cs=r.svE<25?"var(--green)":r.svE<35?"var(--yellow)":"var(--red)";
+    return`<tr><td><strong>User ${r.u}</strong></td><td style="color:${ci}">${r.ifE}%</td><td>${r.ifA.toFixed(3)}</td><td style="color:${cs}">${r.svE}%</td><td>${r.svA.toFixed(3)}</td></tr>`;
+  }).join("");
+  document.getElementById("feat-bars").innerHTML=[{n:"mean_speed",i:.87},{n:"path_length",i:.82},{n:"duration",i:.79},{n:"straightness",i:.71},{n:"displacement",i:.68},{n:"pres_mean",i:.61}]
+    .map(f=>`<div class="chart-bar"><span class="name" style="width:100px;font-size:.77rem">${f.n}</span><div class="bar"><div class="fill" style="width:${f.i*100}%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div><span class="pct">${Math.round(f.i*100)}%</span></div>`).join("");
+  // init log timestamps
+  const t=new Date().toLocaleTimeString();
+  document.getElementById("e-log-init").textContent=t+" [ System ] Select a user and click Record Gesture.";
+  document.getElementById("a-log-init").textContent=t+" [ System ] Select a user, record your gesture, then verify.";
+})();
+</script>
+</body>
+</html>
